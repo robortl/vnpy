@@ -1,0 +1,7 @@
+{
+    "API Token": "your_oanda_api_token_here",
+    "Account ID": "your_account_id_here",
+    "服务器": "Practice",
+    "代理地址": "",
+    "代理端口": 0
+}

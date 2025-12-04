@@ -38,5 +38,12 @@ _templates
 .DS_Store
 *.mo
 
+# Custom config (sensitive data)
+custom/config/*.json
+custom/config/.env
+custom/docker/.env
+custom/docker/logs/
+*.env.local
+
 # Alpha
 lab/

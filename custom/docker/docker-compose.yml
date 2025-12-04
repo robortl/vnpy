@@ -1,0 +1,113 @@
+# VeighNa + OANDA Docker Compose 配置
+# 适用于 Mac 本地开发
+
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库（可选）
+  postgres:
+    image: postgres:15-alpine
+    container_name: vnpy-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vnpy
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vnpy123}
+      POSTGRES_DB: vnpy
+      TZ: Asia/Tokyo
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vnpy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - full
+      - db
+
+  # Redis 缓存（可选）
+  redis:
+    image: redis:7-alpine
+    container_name: vnpy-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - full
+      - cache
+
+  # VeighNa 交易系统（仅 OANDA）
+  vnpy:
+    build:
+      context: ../..
+      dockerfile: custom/docker/Dockerfile
+    container_name: vnpy-trader
+    restart: unless-stopped
+    environment:
+      # OANDA 配置（从 .env 文件读取）
+      OANDA_TOKEN: ${OANDA_TOKEN}
+      OANDA_ACCOUNT_ID: ${OANDA_ACCOUNT_ID}
+      OANDA_SERVER: ${OANDA_SERVER:-Practice}
+      # 时区
+      TZ: Asia/Tokyo
+    volumes:
+      - vnpy_data:/root/.vntrader
+      - ./logs:/app/logs
+    stdin_open: true
+    tty: true
+
+  # VeighNa 完整版（含数据库和缓存）
+  vnpy-full:
+    build:
+      context: ../..
+      dockerfile: custom/docker/Dockerfile
+    container_name: vnpy-trader-full
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # 数据库配置
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: vnpy
+      DATABASE_USER: vnpy
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-vnpy123}
+      # Redis 配置
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # OANDA 配置
+      OANDA_TOKEN: ${OANDA_TOKEN}
+      OANDA_ACCOUNT_ID: ${OANDA_ACCOUNT_ID}
+      OANDA_SERVER: ${OANDA_SERVER:-Practice}
+      # 时区
+      TZ: Asia/Tokyo
+    volumes:
+      - vnpy_data:/root/.vntrader
+      - ./logs:/app/logs
+    stdin_open: true
+    tty: true
+    profiles:
+      - full
+
+volumes:
+  postgres_data:
+  redis_data:
+  vnpy_data:
+
+networks:
+  default:
+    name: vnpy-network

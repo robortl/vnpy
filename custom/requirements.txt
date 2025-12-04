@@ -1,0 +1,9 @@
+# OANDA API
+oandapyV20>=0.7.2
+
+# 可选：数据库和缓存（按需启用）
+# psycopg2-binary>=2.9.0  # PostgreSQL
+# redis>=4.5.0            # Redis
+
+# 其他
+python-dotenv>=1.0.0
